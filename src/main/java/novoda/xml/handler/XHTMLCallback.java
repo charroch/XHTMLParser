@@ -5,7 +5,7 @@ import org.xml.sax.Attributes;
 public interface XHTMLCallback {
 
     enum Tag {
-        P, DIV, HEADER, BODY
+        P, DIV, HEADER, BODY, TITLE
     }
 
     enum TextStyle {

@@ -16,8 +16,10 @@ class XHTMLHandlerSpecs extends Specification with Mockito {
     val handler = new XHTMLHandler();
 
     implicit def xml2is(d: scala.xml.Elem): java.io.InputStream = new ByteArrayInputStream(d.toString.getBytes())
+    implicit def string2is(d: String): java.io.InputStream = new ByteArrayInputStream(d.getBytes())
 
-    "handle a simple div tag" in {
+
+    "handles a simple div tag" in {
       val cb = mock[XHTMLCallback]
       handler.setCallback(cb)
 
@@ -31,7 +33,7 @@ class XHTMLHandlerSpecs extends Specification with Mockito {
       there was one(cb).onTag(isEq(Tag.DIV), any[Attributes], isEq(""))
     }
 
-    "handles attributes correctly" in {
+    "handles attributes" in {
       val cb = mock[XHTMLCallback]
       handler.setCallback(cb)
 
@@ -42,6 +44,54 @@ class XHTMLHandlerSpecs extends Specification with Mockito {
         a: Attributes =>
           a.getValue("class") === "myclass"
       }), isEq(""))
+    }
+
+    "handles mixed content" in {
+      val cb = mock[XHTMLCallback]
+      handler.setCallback(cb)
+
+      val xhtml = """<div>hello <b>World</b>!!!</div>"""
+      XHTML.parse(xhtml, "UTF-8", handler)
+
+      there was one(cb).onTag(isEq(Tag.DIV), any[Attributes], isEq("hello <b>World</b>!!!"))
+    }
+
+    "handles inner tag" in {
+      val cb = mock[XHTMLCallback]
+      handler.setCallback(cb)
+
+      val xhtml = <div><p>hello</p></div>
+      XHTML.parse(xhtml, "UTF-8", handler)
+
+      there was one(cb).onTag(isEq(Tag.P), any[Attributes], isEq("hello"))
+    }
+
+    "handles 2 tag callback" in new mockable {
+
+      val xhtml = <div><p>hello</p><p>world</p></div>
+
+      XHTML.parse(xhtml, "UTF-8", handler)
+
+      there was one(cb).onTag(isEq(Tag.P), any[Attributes], isEq("hello")) then one(cb).onTag(isEq(Tag.P), any[Attributes], isEq("world"))
+    }
+
+    "handles doctype" in new mockable {
+      val xhtml = """<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Letters <b>in bold</b> !</title></head></html>"""
+
+      XHTML.parse(xhtml, "UTF-8", handler)
+      there was one(cb).onTag(isEq(Tag.TITLE), any[Attributes], isEq("Letters <b>in bold</b> !"))
+
+    }
+
+
+  }
+
+  trait mockable extends Before {
+    lazy val cb = mock[XHTMLCallback]
+    val handler = new XHTMLHandler();
+
+    def before = {
+      handler.setCallback(cb)
     }
   }
 
